@@ -214,10 +214,13 @@ def clarks(data, window_len):
 
 # Divides up data into blocks and runs Clark's algorithm one block at at time.
 if __name__ == "__main__":
-	data = load("../data/example_data_1/example_data_1.txt")
+	data = load("../data/example_data_1/example_data_1_180.txt")
 
 	num_snps = len(data)
 	num_indivs = len(data[0])
+
+	# Hyperparameters for splitting up the dataset
+	# TODO: Optimize and choose best values
 	block_size = 180
 	window_len = 30
 
@@ -235,6 +238,7 @@ if __name__ == "__main__":
 	print("Block Size =", block_size)
 	print("Window Length =", window_len)
 	print("# of Blocks =", num_blocks,"\n")
+	print("Starting...")
 	
 	bar = Bar('Progress Bar', max=num_blocks,suffix = '%(percent).1f%% - %(eta)ds')
 	for i in range(num_blocks):
@@ -259,7 +263,7 @@ if __name__ == "__main__":
 	print("********** Clark's Algorithm **********")
 
 	#print("Final haps row, col = {} {}".format(len(haplotypes), len(haplotypes[0])))
-	np.savetxt('../data/example_data_1/example_data_1.txt', haplotypes, fmt='%i', delimiter = ' ')
+	np.savetxt('../data/example_data_1/example_data_1_180_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
 
 
 	
