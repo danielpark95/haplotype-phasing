@@ -195,13 +195,21 @@ def clarks(data, window_len):
 			#bar_i.next()
 		#decrease window size if we didn't add any to our known set
 		if len(known_haps) - curr_known_haps_size == 0:
-			if window_len == 30:
+			if window_len == 32:
 				window_len = 20
 			elif window_len == 20:
-				window_len = 15
-			elif window_len == 15:
+				window_len = 16
+			elif window_len == 16:
 				window_len = 10
 			elif window_len == 10:
+			 	window_len = 8
+			elif window_len == 8:
+			# 	window_len = 10
+			# elif window_len == 10:
+			# 	window_len = 8
+			# elif window_len == 8:
+			# 	window_len = 6
+			# elif window_len == 6:
 				break
 			known_haps = get_known_haps(haplotypes,window_len)
 		#bar_i.finish()
@@ -214,15 +222,15 @@ def clarks(data, window_len):
 
 # Divides up data into blocks and runs Clark's algorithm one block at at time.
 if __name__ == "__main__":
-	data = load("../data/example_data_1/example_data_1_180.txt")
+	data = load("../data/example_data_1/example_data_1_3000.txt")
 
 	num_snps = len(data)
 	num_indivs = len(data[0])
 
 	# Hyperparameters for splitting up the dataset
 	# TODO: Optimize and choose best values
-	block_size = 180
-	window_len = 30
+	block_size = 160
+	window_len = 32
 
 	haplotypes = []
 
@@ -263,7 +271,7 @@ if __name__ == "__main__":
 	print("********** Clark's Algorithm **********")
 
 	#print("Final haps row, col = {} {}".format(len(haplotypes), len(haplotypes[0])))
-	np.savetxt('../data/example_data_1/example_data_1_180_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
+	np.savetxt('../data/example_data_1/example_data_1_3000_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
 
 
 	
