@@ -26,7 +26,7 @@ def gen_2_haps(genotype):
 			hap2.append(1)
 		if gen == 1:
 			hap1.append(0)
-			hap2.append(1) 
+			hap2.append(1)
 	return hap1, hap2
 
 # Return 2d array of all known haplotypes
@@ -50,12 +50,21 @@ def fill_known_haps(data,window_len):
 	haplotypes = np.zeros((num_snps,2*num_indiv),dtype=np.int)
 	haplotypes.fill(-1)
 	known_haps = []
+	hap_freq = {}
 	for i in range(num_indiv):
 		genotype = [row[i] for row in data]
 		for j in range(0,num_snps,window_len):
 			genotype_segment = genotype[j:j+window_len]
 			if genotype_segment.count(1) < 2:
 				hap1, hap2 = gen_2_haps(genotype_segment)
+				if hap1 in hap_freq:
+					hap_freq[hap1] += 1
+				else:
+					hap_freq[hap1] = 0
+				if hap2 in hap_freq:
+					hap_freq[hap2] += 1
+				else:
+					hap_freq[hap2] = 0
 				if hap1 not in known_haps:
 					known_haps.append(hap1)
 				if hap2 not in known_haps:
@@ -65,7 +74,7 @@ def fill_known_haps(data,window_len):
 				for k in range(window_len):
 					haplotypes[j+k][2*i] = hap1[k]
 					haplotypes[j+k][2*i+1] = hap2[k]
-	return haplotypes, known_haps
+	return haplotypes, known_haps, hap_freq
 
 # Helper function for adding two haplotypes
 def add_haplotypes(hap1, hap2):
@@ -76,18 +85,42 @@ def add_haplotypes(hap1, hap2):
 def subtract_genhap(genotype,haplotype):
 	sub_result = [genotype[i] - haplotype[i] for i in range(len(genotype))]
 	return sub_result
+'''
+def make_hap_map(known_set, hap_freq_map):
+	hap_map = {}
+	hap_map_freq = {}
+	all_combos = list(it.combinations(known_set, 2))
+	for pair in all_combos:
+		genotype = str(add_haplotypes(pair[0], pair[1]))
+		if genotype is not in hap_map:
+			hap_map[genotype] = [pair[0],pair[1]]
+			hap_map_freq[genotype] = hap_map_freq[pair[0]]+hap_freq_map[pair[1]]
+		elif genotype is in hap_map:
+			if hap_map_freq <hap_freq_map[pair[0]]+hap_freq_map[pair[1]]:
+				hap_map[genotype] = [pair[0], pair[1]]
+				hap_map_freq[genotype] = hap_freq_map[pair[0]]+hap_freq_map[pair[1]]
+	return hap_map
+'''
 
 # Makes a dictionary of all possible pair-wise combinations of known haplotypes
 # TODO: Remove incompatible haplotypes from known set before calling func in Clark's
 #		to reduce # of comparisons.
-def make_hap_map(known_set):
-    hap_map = {}
-    all_combos = list(it.combinations(known_set, 2))
+def make_hap_map(known_set, hap_freq_map):
+	hap_map = {}
+	hap_map_freq = {}
+	all_combos = list(it.combinations(known_set, 2))
     for pair in all_combos:
-        hap_map[str(add_haplotypes(pair[0], pair[1]))] = [pair[0], pair[1]]
-    return hap_map
+		genotype = str(add_haplotypes(pair[0], pair[1]))
+		if genotype is not in hap_map:
+        	hap_map[genotype] = [pair[0], pair[1]]
+			hap_map_freq[genotype] = hap_freq_map[pair[0]]+hap_freq_map[pair[1]]
+		elif genotype is in hap_map:
+			if hap_map_freq[genotype] < hap_freq_map[pair[0]]+hap_freq_map[pair[1]]:
+				hap_map[genotype] = [pair[0], pair[1]]
+				hap_map_freq[genotype] = hap_freq_map[pair[0]]+hap_freq_map[pair[1]]
+	return hap_map
 
-# Infer haplotype 2 if genotype and haplotype 1 make it unambiguous 
+# Infer haplotype 2 if genotype and haplotype 1 make it unambiguous
 def get_hap2_from_known_hap1(genotype, known_set):
     def validHap(haplotype):
         valid = True
@@ -159,24 +192,25 @@ def guess_rest(data,haplotypes):
 def clarks(data, window_len):
 	num_snps = len(data)
 	num_indiv = len(data[0])
-	haplotypes, known_haps = fill_known_haps(data,window_len)
-
-	hap_map = make_hap_map(known_haps)
+	haplotypes, known_haps, hap_freq_map = fill_known_haps(data,window_len)
+	#For the optimization fill_known_haps should provide a dict of frequency as well
+	hap_map = make_hap_map(known_haps, hap_freq_map)
 	for num_iter in range(10):
 		curr_known_haps_size = len(known_haps)
-		#bar_i = Bar('Phasing Individuals...', max=num_indiv)		
+		#bar_i = Bar('Phasing Individuals...', max=num_indiv)
 		for i in range(num_indiv):
 			genotype = [row[i] for row in data]
 			#bar_j = Bar('SNPs', max=(int)(num_snps/window_len))
 			for j in range(0,num_snps,window_len):
 				#print("Iteration {}, Indiv {}, Window range [{},{}]".format(num_iter,i,j,j+window_len))
-				genotype_segment = genotype[j:j+window_len] 
+				genotype_segment = genotype[j:j+window_len]
 				seg_key = str(genotype_segment)
 
 				if seg_key in hap_map:
 					hap1, hap2 = hap_map[seg_key]
 					hap1_np = np.array(hap1)
 					hap2_np = np.array(hap2)
+					#Increase count of hap1 and hap2
 					for k in range(window_len):
 						haplotypes[j+k][2*i] = hap1[k]
 						haplotypes[j+k][2*i+1] = hap2[k]
@@ -220,7 +254,7 @@ def clarks(data, window_len):
 
 # Divides up data into blocks and runs Clark's algorithm one block at at time.
 if __name__ == "__main__":
-	data = load("../data/test data/test_data_2.txt")
+	data = load("../data/example_data_2/example_data_2_3000.txt")
 
 	num_snps = len(data)
 	num_indivs = len(data[0])
@@ -245,7 +279,7 @@ if __name__ == "__main__":
 	print("Window Length =", window_len)
 	print("# of Blocks =", num_blocks,"\n")
 	print("Starting...")
-	
+
 	bar = Bar('Progress Bar', max=num_blocks,suffix = '%(percent).1f%% - %(eta)ds')
 	for i in range(num_blocks):
 		#print("Working on block #{} out of {}".format(i+1, num_blocks))
@@ -269,18 +303,4 @@ if __name__ == "__main__":
 	print("********** Clark's Algorithm **********")
 
 	#print("Final haps row, col = {} {}".format(len(haplotypes), len(haplotypes[0])))
-	np.savetxt('../data/test data/test_data_2_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
-
-
-	
-
-
-
-
-
-
-
-
-
-
-	
+	np.savetxt('../data/example_data_2/example_data_2_3000_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
