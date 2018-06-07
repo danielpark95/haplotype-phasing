@@ -3,6 +3,8 @@ import csv
 import pdb
 import itertools as it
 from progress.bar import Bar
+import operator
+import ast
 
 # Load data as 2d int array
 def load(file_name):
@@ -70,6 +72,7 @@ def fill_known_haps(data,window_len):
 # Helper function for adding two haplotypes
 def add_haplotypes(hap1, hap2):
     add_result = [hap1[i] +hap2[i] for i in range(len(hap1))]
+    #pdb.set_trace()
     return add_result
 
 # Helper function for subtracting two haplotypes
@@ -86,6 +89,50 @@ def make_hap_map(known_set):
     for pair in all_combos:
         hap_map[str(add_haplotypes(pair[0], pair[1]))] = [pair[0], pair[1]]
     return hap_map
+
+# def make_sorted_hap_map(sorted_string):
+# 	sorted_hap_map={}
+# 	sorted_haps=[ast.literal_eval(haplotype[0]) for haplotype in sorted_string]
+# 	all_hap_combos=list(it.combinations(sorted_haps,2))
+# 	#pdb.set_trace()
+# 	for pair in all_hap_combos:
+# 		sorted_hap_map[str(add_haplotypes(pair[0],pair[1]))]=[pair[0],pair[1]]
+# 	return sorted_hap_map
+
+def make_sorted_hap_map(sorted_string):
+	sorted_hap_map={}
+	#sorted_haps=[ast.literal_eval(haplotype[0]) for haplotype in sorted_string]
+	sorted_haps=[[ast.literal_eval(haplotype[0]),haplotype[1]] for haplotype in sorted_string]
+	pdb.set_trace()
+	all_hap_combos=list(it.combinations(sorted_haps[0][0],2))
+	#pdb.set_trace()
+	for pair in all_hap_combos:
+		sorted_hap_map[str(add_haplotypes(pair[0],pair[1]))]=[pair[0],pair[1],]
+	return sorted_hap_map
+
+# d = {'a': 194, 'b': 54, 'c':34, 'd': 44, 'e': 312, 'full':31}
+
+# ks = d.keys()
+# best_key_so_far = ks[0]
+# for k in ks:
+#    if d[k] > d[best_key_so_far]:
+#       best_key_so_far = k
+
+# print("key " + best_key_so_far + " has the highest value, " + str(d[best_key_so_far]))
+
+# def init_hap_count(haplotypes):
+# 	hap_count_map={}
+# 	for hap in haplotypes:
+# 		hap_count_map[str(hap)] = 0
+# 	return hap_count_map
+
+def make_hap_count_map(hap_count_map,haplotypes):
+	for hap in haplotypes:
+		if str(hap) in hap_count_map:
+			hap_count_map[str(hap)] += 1
+		else:
+			hap_count_map[str(hap)] = 1
+	return hap_count_map
 
 # Infer haplotype 2 if genotype and haplotype 1 make it unambiguous 
 def get_hap2_from_known_hap1(genotype, known_set):
@@ -160,8 +207,14 @@ def clarks(data, window_len):
 	num_snps = len(data)
 	num_indiv = len(data[0])
 	haplotypes, known_haps = fill_known_haps(data,window_len)
-
-	hap_map = make_hap_map(known_haps)
+	#hap_count_map={}
+	#hap_map = make_hap_map(known_haps)
+	#pdb.set_trace()
+	hap_count_map = make_hap_count_map({},known_haps)
+	#hap_count_map = init_hap_count(known_haps)
+	hap_map = make_sorted_hap_map(sorted(hap_count_map.items(), key=operator.itemgetter(1), reverse=True))
+	#pdb.set_trace()
+	hap_count_map = make_hap_count_map({},known_haps)
 	for num_iter in range(10):
 		curr_known_haps_size = len(known_haps)
 		#bar_i = Bar('Phasing Individuals...', max=num_indiv)		
@@ -180,6 +233,8 @@ def clarks(data, window_len):
 					for k in range(window_len):
 						haplotypes[j+k][2*i] = hap1[k]
 						haplotypes[j+k][2*i+1] = hap2[k]
+					hap_count_map = make_hap_count_map(hap_count_map,[hap1,hap2])
+
 				else:
 					hap1, hap2 = get_hap2_from_known_hap1(genotype_segment,known_haps)
 					if len(hap1) > 0 and len(hap2) > 0:
@@ -189,7 +244,11 @@ def clarks(data, window_len):
 							haplotypes[j+k][2*i] = hap1[k]
 							haplotypes[j+k][2*i+1] = hap2[k]
 						known_haps.append(hap2)
-						hap_map = make_hap_map(known_haps)
+						#hap_map = make_hap_map(known_haps)
+						hap_count_map = make_hap_count_map(hap_count_map,[hap1,hap2])
+						#pdb.set_trace()
+						hap_map = make_sorted_hap_map(sorted(hap_count_map.items(), key=operator.itemgetter(1), reverse=True))
+
 				#bar_j.next()
 			#bar_j.finish()
 			#bar_i.next()
@@ -210,6 +269,8 @@ def clarks(data, window_len):
 			# elif window_len == 6:
 				break
 			known_haps = get_known_haps(haplotypes,window_len)
+			hap_count_map=make_hap_count_map(hap_count_map,known_haps)
+
 		#bar_i.finish()
 
 	#print("# of -1 before guess =", np.count_nonzero(haplotypes==-1))
@@ -220,7 +281,7 @@ def clarks(data, window_len):
 
 # Divides up data into blocks and runs Clark's algorithm one block at at time.
 if __name__ == "__main__":
-	data = load("../data/test data/test_data_2.txt")
+	data = load("../data/example_data_1/example_data_1_180.txt")
 
 	num_snps = len(data)
 	num_indivs = len(data[0])
@@ -269,9 +330,7 @@ if __name__ == "__main__":
 	print("********** Clark's Algorithm **********")
 
 	#print("Final haps row, col = {} {}".format(len(haplotypes), len(haplotypes[0])))
-	np.savetxt('../data/test data/test_data_2_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
-
-
+	np.savetxt('../data/example_data_1/example_data_1_180_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
 	
 
 
