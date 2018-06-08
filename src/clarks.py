@@ -220,7 +220,7 @@ def clarks(data, window_len):
 
 # Divides up data into blocks and runs Clark's algorithm one block at at time.
 if __name__ == "__main__":
-	data = load("../data/test data/test_data_2.txt")
+	data = load('../data/test data/test_data_1.txt')
 
 	num_snps = len(data)
 	num_indivs = len(data[0])
@@ -269,7 +269,7 @@ if __name__ == "__main__":
 	print("********** Clark's Algorithm **********")
 
 	#print("Final haps row, col = {} {}".format(len(haplotypes), len(haplotypes[0])))
-	np.savetxt('../data/test data/test_data_2_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
+	np.savetxt('../data/test data/test_data_1_my_sol.txt', haplotypes, fmt='%i', delimiter = ' ')
 
 
 	
